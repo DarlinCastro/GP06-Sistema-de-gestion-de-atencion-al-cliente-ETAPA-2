@@ -95,7 +95,7 @@
             %>
             
             <button type="submit">Iniciar Sesion</button>
-            <a href="crearCuenta.jsp">Crear cuenta</a>
+            <a href="CrearCuenta.jsp">Crear cuenta</a>
         </form>
     </div>
 

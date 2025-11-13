@@ -6,29 +6,29 @@
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
 <html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>Menú Técnico y Programador</title>
-</head>
-<body>
-    
-    <% 
-        if (session.getAttribute("usuarioActual") == null) {
-            response.sendRedirect("login.jsp");
-            return;
-        }
-    %>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Menú Técnico y Programador</title>
+    </head>
+    <body>
 
-    <h2>MENÚ TÉCNICO Y PROGRAMADOR</h2>
-    
-    <p>Bienvenido, ${sessionScope.usuarioActual.nombres} ${sessionScope.usuarioActual.apellidos}</p>
-    <hr>
+        <%
+            if (session.getAttribute("usuarioActual") == null) {
+                response.sendRedirect("login.jsp");
+                return;
+            }
+        %>
 
-    <a href="generarReporte.jsp">Generar Reportes</a><br><br>
-    <a href="seguimientoSolicitud.jsp">Seguimiento Solicitud</a><br><br>
-    
-    <hr>
-    <a href="Logout">Cerrar Sesión</a> 
+        <h2>MENÚ TÉCNICO Y PROGRAMADOR</h2>
 
-</body>
+        <p>Bienvenido, ${sessionScope.usuarioActual.nombres} ${sessionScope.usuarioActual.apellidos}</p>
+        <hr>
+
+        <a href="GenerarReporteController?origen=MenuTecnico.jsp">Generar Reportes</a><br><br>
+        <a href="Seguimiento?origen=MenuTecnico.jsp">Seguimiento Solicitud</a><br><br>
+
+        <hr>
+        <a href="Logout">Cerrar Sesión</a> 
+
+    </body>
 </html>

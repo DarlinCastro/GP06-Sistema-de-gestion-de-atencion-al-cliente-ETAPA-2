@@ -29,7 +29,7 @@
 
     <a href="Asignacion">Asignar Solicitudes</a><br><br> 
     <a href="gestionarUsuarios.jsp">Gestionar Usuarios</a><br><br>
-    <a href="generarReporte.jsp">Generar Reportes</a><br><br>
+    <a href="GenerarReporteController?origen=MenuAdmin.jsp">Generar Reportes</a><br><br>
     
     <hr>
     <a href="Logout">Cerrar Sesión</a> 

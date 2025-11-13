@@ -24,10 +24,12 @@ public class CrearSolicitudController {
         String sql = "SELECT idtiposervicio FROM tipo_servicio WHERE LOWER(TRIM(nombreservicio)) = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, nombreServicio.trim().toLowerCase());
-            try(ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) return rs.getInt("idtiposervicio");
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("idtiposervicio");
+                }
             }
-        } 
+        }
         return -1;
     }
 
@@ -35,29 +37,34 @@ public class CrearSolicitudController {
         String sql = "SELECT idestadosolicitud FROM estado_solicitud WHERE LOWER(TRIM(estadosolicitud)) = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, nombreEstado.trim().toLowerCase());
-            try(ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) return rs.getInt("idestadosolicitud");
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("idestadosolicitud");
+                }
             }
-        } 
+        }
         return -1;
     }
-    
+
     private int obtenerIdUsuarioPorCorreo(Connection conn, String correo) throws SQLException {
         String sql = "SELECT idusuario FROM usuario WHERE LOWER(TRIM(correoelectronico)) = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, correo.trim().toLowerCase());
-            try(ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) return rs.getInt("idusuario");
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("idusuario");
+                }
             }
-        } 
+        }
         return -1;
     }
 
     private int obtenerCantidadTickets(Connection conn) throws SQLException {
         String sql = "SELECT COUNT(*) AS total FROM ticket";
-        try (PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            if (rs.next()) return rs.getInt("total");
+        try (PreparedStatement stmt = conn.prepareStatement(sql); ResultSet rs = stmt.executeQuery()) {
+            if (rs.next()) {
+                return rs.getInt("total");
+            }
         }
         return -1;
     }
@@ -65,15 +72,17 @@ public class CrearSolicitudController {
     private int crearTicket(Connection conn, int idUsuario, String numeroTicket) throws SQLException {
         String sql = "INSERT INTO ticket (idestadoticket, idusuario, fechaasignacion, numeroticket) VALUES (?, ?, ?, ?) RETURNING idticket";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, 1); 
-            stmt.setInt(2, idUsuario); 
+            stmt.setInt(1, 1);
+            stmt.setInt(2, idUsuario);
             stmt.setDate(3, new java.sql.Date(new Date().getTime()));
             stmt.setString(4, numeroTicket);
-            
-            try(ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) return rs.getInt("idticket");
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("idticket");
+                }
             }
-        } 
+        }
         return -1;
     }
 
@@ -84,11 +93,11 @@ public class CrearSolicitudController {
             stmt.setInt(2, idTipoServicio);
             stmt.setInt(3, idEstadoSolicitud);
             stmt.setInt(4, idTicket);
-            
+
             stmt.setDate(5, new java.sql.Date(solicitud.getFechaCreacion().getTime()));
 
             String descripcion = solicitud.getDescripcion() != null ? solicitud.getDescripcion().trim() : "";
-            if (descripcion.length() > 300) { 
+            if (descripcion.length() > 300) {
                 descripcion = descripcion.substring(0, 300);
             }
             stmt.setString(6, descripcion);
@@ -97,11 +106,10 @@ public class CrearSolicitudController {
         }
     }
 
-
     private String generarNuevoNumeroTicket(Connection conn) throws SQLException {
         int cantidadTickets = obtenerCantidadTickets(conn);
         int nuevoId = cantidadTickets + 1;
-        
+
         String idFormateado = String.format("%04d", nuevoId);
         return "T" + idFormateado;
     }
@@ -110,7 +118,7 @@ public class CrearSolicitudController {
 
         int idUsuario = obtenerIdUsuarioPorCorreo(conn, usuario.getCorreoElectronico());
         int idTipoServicio = obtenerIdTipoServicioPorNombre(conn, tipoServicio.getNombreServicio());
-        int idEstadoSolicitud = obtenerIdEstadoSolicitudPorNombre(conn, "Pendiente"); 
+        int idEstadoSolicitud = obtenerIdEstadoSolicitudPorNombre(conn, "Pendiente");
 
         if (idUsuario == -1 || idTipoServicio == -1 || idEstadoSolicitud == -1) {
             System.err.println("Error: Datos de entrada no válidos (Usuario, Tipo de Servicio o Estado no encontrado).");
@@ -129,17 +137,17 @@ public class CrearSolicitudController {
 
         String descGuardar = descripcion.length() > 300 ? descripcion.substring(0, 300) : descripcion;
         solicitud.setDescripcion(descGuardar);
-        
+
         Ticket ticketCreado = new Ticket();
-        ticketCreado.setNumeroTicket(numeroTicket); 
-        solicitud.setTicket(ticketCreado); 
+        ticketCreado.setNumeroTicket(numeroTicket);
+        solicitud.setTicket(ticketCreado);
 
         boolean solicitudGuardada = guardarSolicitud(conn, solicitud, idUsuario, idTipoServicio, idEstadoSolicitud, idTicket);
-        
+
         if (!solicitudGuardada) {
             throw new SQLException("Error: Fallo al guardar el registro de la Solicitud.");
         }
-        
+
         return numeroTicket;
     }
 }

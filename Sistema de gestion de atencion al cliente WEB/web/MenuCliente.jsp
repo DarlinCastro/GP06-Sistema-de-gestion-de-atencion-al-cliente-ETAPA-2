@@ -25,8 +25,8 @@
     <p>Bienvenido, ${sessionScope.usuarioActual.nombres} ${sessionScope.usuarioActual.apellidos}</p>
     <hr>
 
-    <a href="crearSolicitud.jsp">Crear Solicitud</a><br><br>
-    <a href="seguimientoSolicitud.jsp">Seguimiento Solicitud</a><br><br>
+    <a href="CrearSolicitud.jsp">Crear Solicitud</a><br><br>
+    <a href="Seguimiento?origen=MenuCliente.jsp">Seguimiento Solicitud</a><br><br>
     
     <hr>
     <a href="Logout">Cerrar Sesión</a> 
