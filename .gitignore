@@ -1,0 +1,66 @@
+/Sistema de gestion de atencion al cliente WEB/
+# ------------------------------------
+# Archivos de Compilación de Java
+# ------------------------------------
+# Archivos de clases compiladas
+*.class
+
+# Directorio donde Ant o tu IDE almacena las clases compiladas
+# (Comúnmente 'build' o 'classes')
+/build/
+/classes/
+/target/
+
+# Archivos de logs
+*.log
+log.txt
+
+# ------------------------------------
+# Empaquetado
+# ------------------------------------
+# Archivos WAR, JAR, EAR, etc., generados
+*.jar
+*.war
+*.ear
+*.zip
+*.rar
+/dist/
+
+# ------------------------------------
+# Archivos Temporales y de Configuración del IDE
+# ------------------------------------
+# Eclipse
+.classpath
+.project
+.settings/
+*.launch
+
+# IntelliJ / Android Studio
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+
+# Archivos temporales de editor de texto
+*~
+# Archivos de copias de seguridad
+*.bak
+
+# ------------------------------------
+# Directorios de Dependencias
+# ------------------------------------
+# Si tienes una carpeta para dependencias (libs) que Ant no gestiona,
+# pero no quieres subir (es mejor usar un gestor o tenerlas en un lugar fijo)
+/lib/
+
+# ------------------------------------
+# Archivos de Sistema Operativo
+# ------------------------------------
+.DS_Store # macOS
+Thumbs.db # Windows
