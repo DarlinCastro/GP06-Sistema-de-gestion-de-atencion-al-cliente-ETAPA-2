@@ -6,119 +6,165 @@ package capa_controladora;
 
 import base_datos.ConexionBD;
 import capa_modelo.Usuario;
-import capa_modelo.TipoServicio;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.List;
-
+import java.util.Map;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
-@WebServlet("/CrearSolicitud")
+@WebServlet("/CrearSolicitudServlet")
 public class CrearSolicitudServlet extends HttpServlet {
 
-    // GET se mantiene para cargar los tipos de servicio
+    /**
+     * Método GET: Carga la lista de servicios y muestra el formulario
+     */
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
-        if (request.getSession().getAttribute("usuarioActual") == null) {
-            response.sendRedirect("login.jsp");
-            return;
-        }
+
+        System.out.println("=== SERVLET doGet: Iniciando carga de formulario ===");
 
         try {
-            GenerarReporteController grc = new GenerarReporteController(); 
-            List<TipoServicio> listaServicios = grc.cargarTiposServicio();
-            
-            // Manejo de mensajes de error/éxito de un POST previo (PRG)
-            String errorMsg = (String) request.getAttribute("error");
-            if (errorMsg == null) {
-                // Si el error no viene del POST, revisamos la sesión por si viene de una redirección
-                errorMsg = (String) request.getSession().getAttribute("error");
-                if (errorMsg != null) {
-                    request.getSession().removeAttribute("error");
-                }
+            // 1. Verificar que el usuario esté logueado
+            HttpSession session = request.getSession(false);
+            if (session == null || session.getAttribute("usuarioActual") == null) {
+                System.out.println("❌ Sesión no válida, redirigiendo a login");
+                response.sendRedirect("login.jsp?mensaje=Debe iniciar sesión primero.");
+                return;
             }
-            if (errorMsg != null) {
-                request.setAttribute("error", errorMsg);
+
+            // 2. Obtener la lista de servicios desde la BD
+            Map<Integer, String> servicios = CrearSolicitudController.listarTipoServiciosStatic();
+            System.out.println("✅ Servicios cargados: " + servicios.size());
+
+            // 3. Verificar que se cargaron servicios
+            if (servicios.isEmpty()) {
+                System.out.println("⚠️ ADVERTENCIA: No se encontraron servicios en la BD");
+                request.setAttribute("mensaje", "Advertencia: No hay servicios disponibles en el sistema.");
             }
-            
-            request.setAttribute("listaServicios", listaServicios); 
-            request.getRequestDispatcher("crearSolicitud.jsp").forward(request, response);
-            return;
+
+            // 4. Pasar la lista al JSP
+            request.setAttribute("listaServiciosMap", servicios);
+
+            // 5. Forward al JSP
+            String jspPath = "/CrearSolicitud.jsp";
+            System.out.println("➡️ Forwarding a: " + jspPath);
+            request.getRequestDispatcher(jspPath).forward(request, response);
+
         } catch (Exception e) {
-            System.err.println("Error al cargar Tipos de Servicio: " + e.getMessage());
-            request.setAttribute("error", "Error al cargar tipos de servicio: " + e.getMessage());
-            request.getRequestDispatcher("MenuCliente.jsp").forward(request, response);
-            return;
+            System.err.println("❌ ERROR en doGet: " + e.getMessage());
+            e.printStackTrace();
+            request.setAttribute("mensaje", "Error al cargar el formulario: " + e.getMessage());
+            request.getRequestDispatcher("/CrearSolicitud.jsp").forward(request, response);
         }
     }
-    
-    // POST maneja la transacción
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
-            throws ServletException, IOException {
-        
-        String tipoServicioStr = request.getParameter("tipoServicio");
-        String descripcion = request.getParameter("descripcion");
-        
-        Usuario usuarioActual = (Usuario) request.getSession().getAttribute("usuarioActual");
 
-        String mensaje = null;
+    /**
+     * Método POST: Procesa el formulario y crea la solicitud
+     */
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        System.out.println("=== SERVLET doPost: Procesando solicitud ===");
         Connection conn = null;
-        
-        if (usuarioActual == null) { response.sendRedirect("login.jsp"); return; }
-        
-        if (tipoServicioStr == null || tipoServicioStr.isEmpty() || tipoServicioStr.equals("-- Seleccione Tipo de Servicio --") || descripcion.isEmpty()) {
-            request.setAttribute("error", "Error: Faltan datos (Tipo de Servicio o Descripción).");
-            doGet(request, response); 
-            return;
-        }
 
         try {
-            conn = ConexionBD.conectar();
-            if (conn != null) {
-                conn.setAutoCommit(false); 
-                
-                TipoServicio tipoServicio = new TipoServicio(tipoServicioStr);
-                CrearSolicitudController csc = new CrearSolicitudController();
-                
-                String numeroTicket = csc.crearSolicitudConTicket(conn, usuarioActual, tipoServicio, descripcion);
-                
-                if (numeroTicket != null) {
-                    conn.commit(); 
-                    mensaje = "¡Solicitud creada! Su número de ticket es: " + numeroTicket;
-                    request.getSession().setAttribute("mensajeExito", mensaje); 
-                    response.sendRedirect("MenuCliente.jsp"); 
-                    return;
-                } else {
-                    // Si retorna null sin lanzar excepción (lo cual ya corregimos)
-                    throw new Exception("Error inesperado al obtener el número de ticket.");
-                }
+            // 1. Verificar sesión activa
+            HttpSession session = request.getSession(false);
+            if (session == null || session.getAttribute("usuarioActual") == null) {
+                System.out.println("❌ Sesión expirada");
+                response.sendRedirect("login.jsp?mensaje=Sesión expirada. Por favor inicie sesión.");
+                return;
             }
+
+            // 2. Obtener el usuario logueado
+            Usuario usuarioActual = (Usuario) session.getAttribute("usuarioActual");
+            String correoUsuario = usuarioActual.getCorreoElectronico();
+            System.out.println("✅ Usuario: " + correoUsuario);
+
+            // 3. Obtener parámetros del formulario
+            String tipoServicioParam = request.getParameter("tipoServicio");
+            String descripcion = request.getParameter("descripcion");
+
+            System.out.println("📝 Parámetros recibidos:");
+            System.out.println("   - Tipo Servicio: " + tipoServicioParam);
+            System.out.println("   - Descripción: " + (descripcion != null ? descripcion.substring(0, Math.min(50, descripcion.length())) + "..." : "null"));
+
+            // 4. Validar parámetros
+            if (tipoServicioParam == null || tipoServicioParam.trim().isEmpty()) {
+                System.out.println("⚠️ Error: Tipo de servicio no seleccionado");
+                response.sendRedirect(request.getContextPath() + "/CrearSolicitudServlet?mensaje=Error: Debe seleccionar un tipo de servicio.");
+                return;
+            }
+
+            if (descripcion == null || descripcion.trim().isEmpty()) {
+                System.out.println("⚠️ Error: Descripción vacía");
+                response.sendRedirect(request.getContextPath() + "/CrearSolicitudServlet?mensaje=Error: La descripción es obligatoria.");
+                return;
+            }
+
+            // 5. Convertir ID de servicio
+            int idTipoServicio;
+            try {
+                idTipoServicio = Integer.parseInt(tipoServicioParam);
+            } catch (NumberFormatException e) {
+                System.out.println("⚠️ Error: ID de servicio inválido - " + tipoServicioParam);
+                response.sendRedirect(request.getContextPath() + "/CrearSolicitudServlet?mensaje=Error: Tipo de servicio inválido.");
+                return;
+            }
+
+            // 6. Abrir conexión y crear controlador
+            conn = ConexionBD.conectar();
+            if (conn == null) {
+                throw new SQLException("No se pudo establecer conexión con la base de datos");
+            }
+            System.out.println("✅ Conexión a BD establecida");
+
+            CrearSolicitudController controller = new CrearSolicitudController(conn);
+
+            // 7. Crear la solicitud (esto también crea el ticket)
+            System.out.println("🔄 Iniciando creación de solicitud...");
+            String numeroTicket = controller.crearSolicitudConTicketWeb(correoUsuario, idTipoServicio, descripcion);
+
+            // 8. Verificar resultado y redirigir
+            if (numeroTicket != null) {
+                System.out.println("✅ ÉXITO: Solicitud creada con ticket: " + numeroTicket);
+                response.sendRedirect("MenuCliente.jsp?mensaje=✅ Solicitud creada exitosamente. Número de Ticket: " + numeroTicket);
+            } else {
+                System.out.println("❌ Error: No se pudo crear la solicitud");
+                response.sendRedirect(request.getContextPath() + "/CrearSolicitudServlet?mensaje=Error: No se pudo crear la solicitud. Intente nuevamente.");
+            }
+
+        } catch (NumberFormatException e) {
+            System.err.println("❌ Error de formato: " + e.getMessage());
+            response.sendRedirect(request.getContextPath() + "/CrearSolicitudServlet?mensaje=Error: Tipo de servicio inválido.");
+
         } catch (SQLException e) {
-            System.err.println("Error de SQL al crear solicitud: " + e.getMessage());
-            try { if (conn != null) conn.rollback(); } catch (SQLException ex) { /* ignorar */ }
-            request.getSession().setAttribute("error", "Error de base de datos al crear solicitud: " + e.getMessage());
+            System.err.println("❌ Error de base de datos: " + e.getMessage());
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/CrearSolicitudServlet?mensaje=Error de base de datos: " + e.getMessage());
+
         } catch (Exception e) {
-            System.err.println("Error al crear solicitud: " + e.getMessage());
-            request.getSession().setAttribute("error", "Error al crear solicitud: " + e.getMessage());
+            System.err.println("❌ Error general en doPost: " + e.getMessage());
+            e.printStackTrace();
+            response.sendRedirect(request.getContextPath() + "/CrearSolicitudServlet?mensaje=Error inesperado: " + e.getMessage());
+
         } finally {
-            try { 
-                if (conn != null) {
-                    conn.setAutoCommit(true);
-                    conn.close(); 
+            // 9. Cerrar conexión
+            if (conn != null) {
+                try {
+                    conn.close();
+                    System.out.println("✅ Conexión cerrada");
+                } catch (SQLException e) {
+                    System.err.println("⚠️ Error al cerrar conexión: " + e.getMessage());
                 }
-            } catch (SQLException e) {
-                System.err.println("Error al cerrar la conexión: " + e.getMessage());
             }
         }
-        // Redirigir al GET para recargar la página a través del PRG
-        response.sendRedirect("CrearSolicitud");
     }
 }

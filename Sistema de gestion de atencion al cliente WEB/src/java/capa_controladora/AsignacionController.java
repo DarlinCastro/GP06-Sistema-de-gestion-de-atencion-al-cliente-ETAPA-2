@@ -19,34 +19,36 @@ import java.util.Date;
 import java.util.List;
 
 public class AsignacionController {
+
     private Solicitud solicitudSeleccionada;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-    private List<Solicitud> listaTodasSolicitudes; 
+    private List<Solicitud> listaTodasSolicitudes;
     private List<String> listaTodosCargos;
-    private List<Usuario> listaTodosTecnicos; 
+    private List<Usuario> listaTodosTecnicos;
 
     private static final String SQL_OBTENER_CARGOS = "SELECT DISTINCT cargo FROM TIPO_USUARIO";
     private static final String SQL_OBTENER_TECNICOS_POR_CARGO = "SELECT u.nombres, u.apellidos, tu.cargo FROM USUARIO u JOIN TIPO_USUARIO tu ON u.idtipousuario = tu.idtipousuario WHERE tu.cargo = ?";
-    private static final String SQL_OBTENER_ID_TECNICO_BY_NAME = 
-        "SELECT idusuario FROM USUARIO WHERE nombres = ? AND apellidos = ?";
-    private static final String SQL_OBTENER_SOLICITUDES = 
-        "SELECT s.idsolicitud, s.fechacreacion, s.descripcion, t.numeroticket, t.fechaasignacion, " + 
-        "   u.idusuario AS idtecnico, u.nombres AS tecnico_nombres, u.apellidos AS tecnico_apellidos, " +
-        "   tu.cargo AS tecnico_cargo, t.idestadoticket, es.estadosolicitud, et.nivelprioridad, ts.nombreservicio " + 
-        "FROM SOLICITUD s " +
-        "JOIN TICKET t ON s.idticket = t.idticket " +
-        "JOIN ESTADO_SOLICITUD es ON s.idestadosolicitud = es.idestadosolicitud " +
-        "JOIN TIPO_SERVICIO ts ON s.idtiposervicio = ts.idtiposervicio " +
-        "LEFT JOIN ESTADO_TICKET et ON t.idestadoticket = et.idestadoticket " + 
-        "LEFT JOIN USUARIO u ON t.idusuario = u.idusuario " + 
-        "LEFT JOIN TIPO_USUARIO tu ON u.idtipousuario = tu.idtipousuario " + 
-        "ORDER BY s.idsolicitud DESC";
+    private static final String SQL_OBTENER_ID_TECNICO_BY_NAME
+            = "SELECT idusuario FROM USUARIO WHERE nombres = ? AND apellidos = ?";
+    private static final String SQL_OBTENER_SOLICITUDES
+            = "SELECT s.idsolicitud, s.fechacreacion, s.descripcion, t.numeroticket, t.fechaasignacion, "
+            + "   u.idusuario AS idtecnico, u.nombres AS tecnico_nombres, u.apellidos AS tecnico_apellidos, "
+            + "   tu.cargo AS tecnico_cargo, t.idestadoticket, es.estadosolicitud, et.nivelprioridad, ts.nombreservicio "
+            + "FROM SOLICITUD s "
+            + "JOIN TICKET t ON s.idticket = t.idticket "
+            + "JOIN ESTADO_SOLICITUD es ON s.idestadosolicitud = es.idestadosolicitud "
+            + "JOIN TIPO_SERVICIO ts ON s.idtiposervicio = ts.idtiposervicio "
+            + "LEFT JOIN ESTADO_TICKET et ON t.idestadoticket = et.idestadoticket "
+            + "LEFT JOIN USUARIO u ON t.idusuario = u.idusuario "
+            + "LEFT JOIN TIPO_USUARIO tu ON u.idtipousuario = tu.idtipousuario "
+            + "ORDER BY s.idsolicitud DESC";
     private static final String SQL_ID_PRIORIDAD = "SELECT idestadoticket FROM ESTADO_TICKET WHERE TRIM(nivelprioridad) = ?";
     private static final String SQL_ID_ESTADO_SOLICITUD = "SELECT idestadosolicitud FROM ESTADO_SOLICITUD WHERE TRIM(estadosolicitud) = ?";
     private static final String SQL_UPDATE_TICKET = "UPDATE TICKET SET idestadoticket = ?, idusuario = ?, fechaasignacion = ? WHERE numeroticket = ?";
     private static final String SQL_UPDATE_SOLICITUD = "UPDATE SOLICITUD SET idestadosolicitud = ? WHERE idticket = (SELECT idticket FROM TICKET WHERE numeroticket = ?)";
     private static final String SQL_OBTENER_PRIORIDADES = "SELECT NIVELPRIORIDAD FROM ESTADO_TICKET";
     private static final String SQL_OBTENER_ESTADOS_SOLICITUD = "SELECT ESTADOSOLICITUD FROM ESTADO_SOLICITUD";
+    private static final String SQL_OBTENER_TICKETS = "SELECT numeroticket FROM TICKET ORDER BY numeroticket DESC";
 
     public AsignacionController() {
         this.solicitudSeleccionada = null;
@@ -55,7 +57,7 @@ public class AsignacionController {
 
     private int obtenerId(Connection conn, String sql, String valor) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, valor.trim()); 
+            ps.setString(1, valor.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt(1);
@@ -64,11 +66,11 @@ public class AsignacionController {
         }
         throw new SQLException("Error: No se encontró ID para el valor: " + valor);
     }
-    
+
     private int obtenerIdTecnico(Connection conn, String nombres, String apellidos) throws SQLException {
         try (PreparedStatement ps = conn.prepareStatement(SQL_OBTENER_ID_TECNICO_BY_NAME)) {
-            ps.setString(1, nombres.trim()); 
-            ps.setString(2, apellidos.trim()); 
+            ps.setString(1, nombres.trim());
+            ps.setString(2, apellidos.trim());
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt("idusuario");
@@ -77,10 +79,12 @@ public class AsignacionController {
         }
         throw new SQLException("Error: No se encontró ID para el técnico: " + nombres + " " + apellidos);
     }
-    
+
     public Solicitud buscarSolicitudPorTicket(String numeroTicket) {
-        if (numeroTicket == null || listaTodasSolicitudes == null) return null;
-        
+        if (numeroTicket == null || listaTodasSolicitudes == null) {
+            return null;
+        }
+
         for (Solicitud s : listaTodasSolicitudes) {
             if (s.getTicket().getNumeroTicket().equals(numeroTicket)) {
                 return s;
@@ -90,50 +94,87 @@ public class AsignacionController {
     }
 
     public Usuario buscarTecnicoPorNombre(String nombreCompleto) {
-        if (nombreCompleto == null || listaTodosTecnicos == null) return null;
-        
-        String[] partes = nombreCompleto.split(" ", 2);
-        if (partes.length < 2) return null;
+        System.out.println("DEBUG: Buscando técnico: '" + nombreCompleto + "' (length: " + (nombreCompleto != null ? nombreCompleto.length() : 0) + ")");
+        System.out.println("DEBUG: Total técnicos en lista: " + (listaTodosTecnicos != null ? listaTodosTecnicos.size() : 0));
+
+        if (nombreCompleto == null || listaTodosTecnicos == null || listaTodosTecnicos.isEmpty()) {
+            System.out.println("DEBUG: Lista de técnicos vacía o nombre nulo");
+            return null;
+        }
+
+        // Normalizar el nombre de búsqueda (quitar espacios extra)
+        String nombreBuscar = nombreCompleto.trim().replaceAll("\\s+", " ");
+        System.out.println("DEBUG: Nombre normalizado: '" + nombreBuscar + "'");
+
+        // Dividir nombre completo
+        String[] partes = nombreBuscar.split("\\s+", 2);
+        if (partes.length < 2) {
+            System.out.println("DEBUG: Formato de nombre inválido: " + nombreBuscar);
+            return null;
+        }
 
         String nombres = partes[0].trim();
         String apellidos = partes[1].trim();
-        
+
+        System.out.println("DEBUG: Buscando - Nombres: '" + nombres + "', Apellidos: '" + apellidos + "'");
+
         for (Usuario u : listaTodosTecnicos) {
-            if (u.getNombres().trim().equals(nombres) && u.getApellidos().trim().equals(apellidos)) {
+            String nombresDB = u.getNombres().trim();
+            String apellidosDB = u.getApellidos().trim();
+
+            System.out.println("DEBUG: Comparando con - Nombres: '" + nombresDB + "', Apellidos: '" + apellidosDB + "'");
+
+            // Comparación exacta primero
+            if (nombresDB.equals(nombres) && apellidosDB.equals(apellidos)) {
+                System.out.println("DEBUG: ¡Técnico encontrado (exacto)!");
+                return u;
+            }
+
+            // Comparación sin distinguir mayúsculas/minúsculas
+            if (nombresDB.equalsIgnoreCase(nombres) && apellidosDB.equalsIgnoreCase(apellidos)) {
+                System.out.println("DEBUG: ¡Técnico encontrado (case-insensitive)!");
                 return u;
             }
         }
+
+        System.out.println("DEBUG: Técnico NO encontrado");
         return null;
     }
-    
+
     public List<String> obtenerCargos() {
-         List<String> cargos = new ArrayList<>();
-         try (Connection conn = ConexionBD.conectar();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(SQL_OBTENER_CARGOS)) {
+        List<String> cargos = new ArrayList<>();
+        try (Connection conn = ConexionBD.conectar(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SQL_OBTENER_CARGOS)) {
 
-             if (conn == null) return cargos;
+            if (conn == null) {
+                return cargos;
+            }
 
-             while (rs.next()) {
-                 cargos.add(rs.getString("cargo").trim());
-             }
-         } catch (SQLException e) {
-             System.err.println("Error al obtener cargos: " + e.getMessage());
-         }
-         return cargos;
+            while (rs.next()) {
+                String cargo = rs.getString("cargo").trim();
+                // Filtrar solo Cliente, Programador y Técnico (excluir Admin)
+                if (cargo.equalsIgnoreCase("Cliente")
+                        || cargo.equalsIgnoreCase("Programador")
+                        || cargo.equalsIgnoreCase("Técnico")) {
+                    cargos.add(cargo);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener cargos: " + e.getMessage());
+        }
+        return cargos;
     }
-    
+
     public List<String> obtenerPrioridades() {
         List<String> prioridades = new ArrayList<>();
-        try (Connection conn = ConexionBD.conectar();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(SQL_OBTENER_PRIORIDADES)) {
+        try (Connection conn = ConexionBD.conectar(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SQL_OBTENER_PRIORIDADES)) {
 
-             if (conn == null) return prioridades;
+            if (conn == null) {
+                return prioridades;
+            }
 
-             while (rs.next()) {
-                 prioridades.add(rs.getString("NIVELPRIORIDAD").trim());
-             }
+            while (rs.next()) {
+                prioridades.add(rs.getString("NIVELPRIORIDAD").trim());
+            }
         } catch (SQLException e) {
             System.err.println("Error al obtener prioridades: " + e.getMessage());
         }
@@ -141,64 +182,91 @@ public class AsignacionController {
     }
 
     public List<String> obtenerEstadosSolicitud() {
-         List<String> estados = new ArrayList<>();
-         try (Connection conn = ConexionBD.conectar();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(SQL_OBTENER_ESTADOS_SOLICITUD)) {
+        List<String> estados = new ArrayList<>();
+        try (Connection conn = ConexionBD.conectar(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SQL_OBTENER_ESTADOS_SOLICITUD)) {
 
-             if (conn == null) return estados;
+            if (conn == null) {
+                return estados;
+            }
 
-             while (rs.next()) {
-                 estados.add(rs.getString("ESTADOSOLICITUD").trim());
-             }
-         } catch (SQLException e) {
-             System.err.println("Error al obtener estados de solicitud: " + e.getMessage());
-         }
-         return estados;
+            while (rs.next()) {
+                estados.add(rs.getString("ESTADOSOLICITUD").trim());
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener estados de solicitud: " + e.getMessage());
+        }
+        return estados;
+    }
+
+    public List<String> obtenerTodosNumerosTicket() {
+        List<String> numerosTicket = new ArrayList<>();
+
+        try (Connection conn = ConexionBD.conectar(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SQL_OBTENER_TICKETS)) {
+
+            if (conn == null) {
+                return numerosTicket;
+            }
+
+            while (rs.next()) {
+                numerosTicket.add(rs.getString("numeroticket").trim());
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener números de ticket: " + e.getMessage());
+        }
+        return numerosTicket;
     }
 
     public List<String> obtenerNombresTecnicosPorCargo(String cargo) {
         List<String> nombresTecnicos = new ArrayList<>();
-        this.listaTodosTecnicos.clear(); 
-        String cargoPadded = String.format("%-10s", cargo); 
+        String cargoPadded = String.format("%-10s", cargo);
 
-        try (Connection conn = ConexionBD.conectar();
-             PreparedStatement ps = conn.prepareStatement(SQL_OBTENER_TECNICOS_POR_CARGO)) {
+        try (Connection conn = ConexionBD.conectar(); PreparedStatement ps = conn.prepareStatement(SQL_OBTENER_TECNICOS_POR_CARGO)) {
 
-            if (conn == null) return nombresTecnicos;
+            if (conn == null) {
+                return nombresTecnicos;
+            }
 
             ps.setString(1, cargoPadded);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    TipoUsuario tipo = new TipoUsuario(rs.getString("cargo").trim()); 
+                    TipoUsuario tipo = new TipoUsuario(rs.getString("cargo").trim());
                     Usuario tecnico = new Usuario();
-                    tecnico.setNombres(rs.getString("nombres").trim());
-                    tecnico.setApellidos(rs.getString("apellidos").trim());
+
+                    String nombres = rs.getString("nombres").trim();
+                    String apellidos = rs.getString("apellidos").trim();
+
+                    tecnico.setNombres(nombres);
+                    tecnico.setApellidos(apellidos);
                     tecnico.setTipoUsuario(tipo);
-                    
-                    this.listaTodosTecnicos.add(tecnico); 
-                    
-                    nombresTecnicos.add(tecnico.getNombres().trim() + " " + tecnico.getApellidos().trim());
+
+                    this.listaTodosTecnicos.add(tecnico);
+
+                    String nombreCompleto = nombres + " " + apellidos;
+                    nombresTecnicos.add(nombreCompleto);
+
+                    System.out.println("DEBUG: Técnico cargado - '" + nombreCompleto + "' (bytes: " + nombreCompleto.length() + ") del cargo: " + cargo);
                 }
             }
+            System.out.println("DEBUG: Total técnicos del cargo '" + cargo + "': " + nombresTecnicos.size());
         } catch (SQLException e) {
             System.err.println("Error al obtener técnicos por cargo: " + e.getMessage());
+            e.printStackTrace();
         }
         return nombresTecnicos;
     }
 
     public List<Solicitud> obtenerTodasSolicitudes() {
         List<Solicitud> solicitudes = new ArrayList<>();
-        try (Connection conn = ConexionBD.conectar();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(SQL_OBTENER_SOLICITUDES)) {
+        try (Connection conn = ConexionBD.conectar(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(SQL_OBTENER_SOLICITUDES)) {
 
-            if (conn == null) return solicitudes;
+            if (conn == null) {
+                return solicitudes;
+            }
 
             while (rs.next()) {
                 EstadoSolicitud estado = new EstadoSolicitud(rs.getString("estadosolicitud").trim());
                 TipoServicio servicio = new TipoServicio(rs.getString("nombreservicio").trim());
-                
+
                 Usuario tecnicoAsignado = null;
                 Date fechaAsignacion = rs.getDate("fechaasignacion");
                 EstadoTicket nivelPrioridad = null;
@@ -206,7 +274,7 @@ public class AsignacionController {
                 if (rs.getString("nivelprioridad") != null) {
                     nivelPrioridad = new EstadoTicket(rs.getString("nivelprioridad").trim());
                 }
-                
+
                 if (rs.getInt("idtecnico") != 0) {
                     TipoUsuario tipoTecnico = new TipoUsuario(rs.getString("tecnico_cargo").trim());
                     tecnicoAsignado = new Usuario();
@@ -216,7 +284,7 @@ public class AsignacionController {
                 }
 
                 Ticket ticket = new Ticket(nivelPrioridad, fechaAsignacion, rs.getString("numeroticket").trim(), tecnicoAsignado);
-                
+
                 Solicitud s = new Solicitud(null, servicio, estado, ticket, rs.getDate("fechacreacion"), rs.getString("descripcion").trim());
                 solicitudes.add(s);
             }
@@ -226,28 +294,31 @@ public class AsignacionController {
         }
         return solicitudes;
     }
+
     public boolean ejecutarAsignacion(Solicitud solicitud) throws Exception {
         Connection conn = ConexionBD.conectar();
-        if (conn == null) return false;
+        if (conn == null) {
+            return false;
+        }
 
         boolean exito = false;
 
         try {
-            conn.setAutoCommit(false); 
-            
+            conn.setAutoCommit(false);
+
             String prioridad = solicitud.getTicket().getEstadoTicket().getNivelPrioridad();
             String estado = solicitud.getEstadoSolicitud().getEstadoSolicitud();
             Usuario tecnicoAsignado = solicitud.getTicket().getTecnicoAsignado();
-            
+
             int idPrioridad = obtenerId(conn, SQL_ID_PRIORIDAD, prioridad);
             int idNuevoEstado = obtenerId(conn, SQL_ID_ESTADO_SOLICITUD, estado);
-            
+
             int idTecnico = obtenerIdTecnico(conn, tecnicoAsignado.getNombres(), tecnicoAsignado.getApellidos());
 
             try (PreparedStatement psTicket = conn.prepareStatement(SQL_UPDATE_TICKET)) {
                 psTicket.setInt(1, idPrioridad);
-                psTicket.setInt(2, idTecnico); 
-                psTicket.setDate(3, new java.sql.Date(solicitud.getTicket().getFechaAsignacion().getTime())); 
+                psTicket.setInt(2, idTecnico);
+                psTicket.setDate(3, new java.sql.Date(solicitud.getTicket().getFechaAsignacion().getTime()));
                 psTicket.setString(4, solicitud.getTicket().getNumeroTicket());
                 psTicket.executeUpdate();
             }
@@ -258,21 +329,25 @@ public class AsignacionController {
                 psSolicitud.executeUpdate();
             }
 
-            conn.commit(); 
+            conn.commit();
             exito = true;
 
         } catch (SQLException e) {
             System.err.println("Error en la transacción de asignación: " + e.getMessage());
             try {
-                conn.rollback(); 
+                conn.rollback();
             } catch (SQLException ex) {
                 System.err.println("Error al hacer rollback: " + ex.getMessage());
             }
-            throw new Exception("Fallo en la asignación: " + e.getMessage(), e); 
+            throw new Exception("Fallo en la asignación: " + e.getMessage(), e);
         } finally {
-            try { if (conn != null) conn.close(); } catch (SQLException e) {}
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+            } catch (SQLException e) {
+            }
         }
         return exito;
     }
-
 }

@@ -53,6 +53,10 @@ public class LoginServlet extends HttpServlet {
                 response.sendRedirect("MenuAdmin.jsp");
             } else if ("Cliente".equalsIgnoreCase(cargo)) {
                 response.sendRedirect("MenuCliente.jsp");
+            } else if ("Técnico".equalsIgnoreCase(cargo)) {
+                response.sendRedirect("MenuTecnico.jsp");
+            } else if ("Programador".equalsIgnoreCase(cargo)) {
+                response.sendRedirect("MenuTecnico.jsp");
             } 
             else {
                 request.setAttribute("error", "Error: Rol de usuario no reconocido.");

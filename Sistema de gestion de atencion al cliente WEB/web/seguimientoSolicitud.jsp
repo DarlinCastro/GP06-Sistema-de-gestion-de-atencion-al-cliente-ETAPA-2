@@ -1,118 +1,338 @@
-<%-- 
+<%--
     Document   : seguimientoSolicitud
-    Created on : 12 nov 2025, 01:06:07
-    Author     : DELL
+    Created on : 15 nov 2025, 23:29:55
+    Autor      : Erick :)
 --%>
+
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <!DOCTYPE html>
 <html>
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-    <title>SEGUIMIENTO DE SOLICITUD - Web</title>
-</head>
-<body>
-    
-    <h2>SEGUIMIENTO DE SOLICITUD</h2>
-    <p>Rol: **${sessionScope.usuarioActual.tipoUsuario.cargo}**</p>
-    <p><a href="Menu${sessionScope.usuarioActual.tipoUsuario.cargo}.jsp">Atrás</a></p>
+    <meta charset="UTF-8">
+    <title>SEGUIMIENTO DE SOLICITUD</title>
 
-    <p style="color: green; font-weight: bold;">${requestScope.mensajeExito}</p>
-    <p style="color: red; font-weight: bold;">${requestScope.error}</p>
-
-    <h3>Mis Solicitudes</h3>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Ticket</th>
-                <th>Fec. Creación</th>
-                <th>Servicio</th>
-                <th>Descripción</th>
-                <th>Estado</th>
-                <c:if test="${sessionScope.usuarioActual.tipoUsuario.cargo != 'Cliente'}">
-                    <th>Prioridad</th>
-                </c:if>
-            </tr>
-        </thead>
-        <tbody>
-            <c:forEach var="sol" items="${requestScope.listaSolicitudes}">
-                <tr onclick="cargarDatosTicket('${sol.ticket.numeroTicket}', 
-                                             '${sol.descripcion}', 
-                                             '${sol.estadoSolicitud.estadoSolicitud}')"> 
-                    <td>${sol.ticket.numeroTicket}</td>
-                    <td><fmt:formatDate value="${sol.fechaCreacion}" pattern="yyyy-MM-dd"/></td>
-                    <td>${sol.tipoServicio.nombreServicio}</td>
-                    <td>${sol.descripcion}</td>
-                    <td>${sol.estadoSolicitud.estadoSolicitud}</td>
-                    <c:if test="${sessionScope.usuarioActual.tipoUsuario.cargo != 'Cliente'}">
-                        <td>${sol.ticket.estadoTicket.nivelPrioridad}</td>
-                    </c:if>
-                </tr>
-            </c:forEach>
-        </tbody>
-    </table>
-    
-    <hr>
-
-    <fieldset>
-        <legend>Detalle y Acción</legend>
-        
-        <form method="POST" action="Seguimiento" id="formAccion">
-            <label>Nº Ticket Seleccionado:</label> 
-            <input type="text" name="numeroTicket" id="txtNumeroTicket" readonly required><br>
-            
-            <label>Estado Actual:</label> <input type="text" id="txtEstadoActual" readonly><br>
-            
-            <c:choose>
-                <c:when test="${sessionScope.usuarioActual.tipoUsuario.cargo == 'Cliente'}">
-                    <input type="hidden" name="nuevoEstado" value="Cancelado">
-                    <button type="button" onclick="confirmarAccion('CANCELAR')">Cancelar Solicitud</button>
-                    
-                </c:when>
-                <c:otherwise>
-                    <label>Nuevo Estado:</label>
-                    <select name="nuevoEstado" id="cbNuevoEstado" required>
-                        <option value="">-- Seleccione Nuevo Estado --</option>
-                        <c:forEach var="estado" items="${requestScope.listaTodosLosEstados}">
-                            <option value="${estado.estadoSolicitud}">${estado.estadoSolicitud}</option>
-                        </c:forEach>
-                    </select><br><br>
-                    <button type="button" onclick="confirmarAccion('ACTUALIZAR')">Actualizar Solicitud</button>
-                </c:otherwise>
-            </c:choose>
-            <input type="hidden" name="accion" id="accionInput">
-        </form>
-    </fieldset>
-
-    <script>
-        function cargarDatosTicket(numeroTicket, descripcion, estadoActual) {
-            document.getElementById('txtNumeroTicket').value = numeroTicket;
-            document.getElementById('txtEstadoActual').value = estadoActual;
-            
-            // Si eres Soporte, puedes pre-seleccionar el estado actual
-            var cbNuevoEstado = document.getElementById('cbNuevoEstado');
-            if (cbNuevoEstado) {
-                cbNuevoEstado.value = estadoActual;
-            }
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #4e73df, #8e44ad);
+            height: 100vh;
+            overflow-x: hidden;
         }
-        
+
+        /* Barra superior */
+        .top-bar {
+            background-color: #0a2240;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-atras {
+            background-color: #3a7afe;
+            padding: 8px 18px;
+            color: white;
+            text-decoration: none;
+            font-size: 15px;
+            border-radius: 6px;
+        }
+
+        /* Tarjeta central */
+        .contenedor {
+            width: 520px;
+            margin: 40px auto;
+            background: white;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0px 8px 25px rgba(0, 0, 0, 0.25);
+            text-align: left;
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 25px;
+            color: #0a2240;
+        }
+
+        .field-row {
+            margin-bottom: 14px;
+        }
+
+        .field-row label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #cfcfcf;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+
+        .readonly-field {
+            background-color: #f2f2f2;
+        }
+
+        textarea {
+            resize: vertical;
+            height: 120px;
+        }
+
+        .acciones {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .btn-accion {
+            padding: 12px 28px;
+            border: none;
+            font-size: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+
+        .btn-update {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-cancel {
+            background-color: #8e44ad;
+            color: white;
+        }
+
+        .msg-exito {
+            color: #1e8449;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .msg-error {
+            color: #c0392b;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* FOOTER FIJO */
+        .footer {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          background-color: #1a237e;
+          color: white;
+          text-align: center;
+          padding: 15px 0;
+          font-size: 14px;
+          z-index: 1;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <!-- BARRA SUPERIOR -->
+    <div class="top-bar">
+        <c:set var="urlDestino" value="${requestScope.urlAtras}" />
+        <c:if test="${empty urlDestino}">
+            <c:set var="urlDestino" value="Menu${sessionScope.usuarioActual.tipoUsuario.cargo.trim()}.jsp" />
+        </c:if>
+
+        <a href="${urlDestino}" class="btn-atras">Atrás</a>
+    </div>
+
+    <!-- TARJETA CENTRAL -->
+    <div class="contenedor">
+
+        <h2>Seguimiento de Solicitud</h2>
+
+        <p class="msg-exito">${sessionScope.mensajeExito}</p>
+        <p class="msg-error">${sessionScope.error}</p>
+        <c:remove var="mensajeExito" scope="session"/>
+        <c:remove var="error" scope="session"/>
+
+        <c:set var="esCliente" value="${sessionScope.usuarioActual.tipoUsuario.cargo.trim() == 'Cliente'}" />
+
+        <form method="POST" action="Seguimiento" id="formAccion">
+            <input type="hidden" name="accion" id="accionInput">
+
+            <script> let solicitudesData = []; </script>
+
+            <c:forEach var="sol" items="${requestScope.listaSolicitudes}">
+                <script>
+                    solicitudesData.push({
+                        numeroTicket: '${sol.ticket.numeroTicket.trim()}',
+                        fechaCreacion: '<fmt:formatDate value="${sol.fechaCreacion}" pattern="dd/MM/yyyy"/>',
+                        tipoServicio: '${sol.tipoServicio.nombreServicio.trim()}',
+                        descripcion: '${sol.descripcion}',
+                        estadoActual: '${sol.estadoSolicitud.estadoSolicitud.trim()}',
+                        prioridad: '${sol.ticket.estadoTicket.nivelPrioridad.trim()}'
+                    });
+                </script>
+            </c:forEach>
+
+            <!-- DATOS FIJOS -->
+            <div class="field-row">
+                <label>Cargo</label>
+                <input type="text" class="readonly-field" readonly
+                       value="${sessionScope.usuarioActual.tipoUsuario.cargo.trim()}">
+            </div>
+
+            <div class="field-row">
+                <label>Nombre</label>
+                <input type="text" class="readonly-field" readonly
+                       value="${sessionScope.usuarioActual.nombres.trim()} ${sessionScope.usuarioActual.apellidos.trim()}">
+            </div>
+
+            <hr>
+
+            <!-- TICKET -->
+            <div class="field-row">
+                <label>N° Ticket</label>
+                <select id="txtNumeroTicketDropdown" name="numeroTicket" onchange="cargarDatosTicketSeleccionado()" required>
+                    <option value="">-- Seleccione un Ticket --</option>
+
+                    <c:forEach var="sol" items="${requestScope.listaSolicitudes}">
+                        <option value="${sol.ticket.numeroTicket.trim()}">${sol.ticket.numeroTicket.trim()}</option>
+                    </c:forEach>
+                </select>
+                <input type="hidden" id="txtTicketSeleccionado" name="numeroTicketHidden">
+            </div>
+
+            <!-- CAMPOS AUTO-RELLENADOS -->
+            <div class="field-row">
+                <label>Fecha Creación</label>
+                <input type="text" id="txtFechaCreacion" class="readonly-field" readonly>
+            </div>
+
+            <div class="field-row">
+                <label>Tipo Servicio</label>
+                <input type="text" id="txtTipoServicio" class="readonly-field" readonly>
+            </div>
+
+            <div class="field-row">
+                <label>Descripción</label>
+                <textarea id="txtDescripcion" class="readonly-field" readonly></textarea>
+            </div>
+
+            <c:if test="${!esCliente}">
+                <div class="field-row">
+                    <label>Nivel de Prioridad</label>
+                    <input type="text" id="txtNivelPrioridad" class="readonly-field" readonly>
+                </div>
+            </c:if>
+
+            <!-- ESTADO -->
+            <div class="field-row">
+                <label>Estado de Solicitud</label>
+
+                <c:choose>
+                    <c:when test="${esCliente}">
+                        <input type="text" id="txtEstadoActual" name="nuevoEstado"
+                               class="readonly-field" readonly>
+                    </c:when>
+
+                    <c:otherwise>
+                        <select id="cbNuevoEstado" name="nuevoEstado" required>
+                            <option value="">-- Seleccione Nuevo Estado --</option>
+                            <c:forEach var="estado" items="${requestScope.listaTodosLosEstados}">
+                                <option value="${estado.estadoSolicitud}">${estado.estadoSolicitud}</option>
+                            </c:forEach>
+                        </select>
+                        <input type="hidden" id="txtEstadoActual">
+                    </c:otherwise>
+                </c:choose>
+            </div>
+
+            <!-- BOTONES -->
+            <div class="acciones">
+                <c:if test="${!esCliente}">
+                    <button type="button" class="btn-accion btn-update"
+                            onclick="confirmarAccion('ACTUALIZAR')">
+                        Actualizar Solicitud
+                    </button>
+                </c:if>
+
+                <c:if test="${esCliente}">
+                    <button type="button" class="btn-accion btn-cancel"
+                            onclick="confirmarAccion('CANCELAR')">
+                        Cancelar Solicitud
+                    </button>
+                </c:if>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        © 2025 KIA. Todos los derechos reservados.
+    </div>
+
+    <!-- SCRIPTS -->
+    <script>
+        function limpiarCampos() {
+            document.getElementById('txtFechaCreacion').value = '';
+            document.getElementById('txtTipoServicio').value = '';
+            document.getElementById('txtDescripcion').value = '';
+            let p = document.getElementById('txtNivelPrioridad'); if (p) p.value = '';
+            let e = document.getElementById('txtEstadoActual'); if (e) e.value = '';
+            let cb = document.getElementById('cbNuevoEstado'); if (cb) cb.value = '';
+            document.getElementById('txtTicketSeleccionado').value = '';
+        }
+
+        function cargarDatosTicketSeleccionado() {
+            const ticketNum = document.getElementById("txtNumeroTicketDropdown").value;
+            if (!ticketNum) return limpiarCampos();
+
+            const s = solicitudesData.find(sol => sol.numeroTicket === ticketNum);
+            if (!s) return;
+
+            document.getElementById("txtFechaCreacion").value = s.fechaCreacion;
+            document.getElementById("txtTipoServicio").value = s.tipoServicio;
+            document.getElementById("txtDescripcion").value = s.descripcion;
+            const p = document.getElementById("txtNivelPrioridad"); if (p) p.value = s.prioridad;
+            document.getElementById("txtEstadoActual").value = s.estadoActual;
+
+            const cb = document.getElementById("cbNuevoEstado");
+            if (cb) cb.value = s.estadoActual;
+
+            document.getElementById("txtTicketSeleccionado").value = ticketNum;
+        }
+
         function confirmarAccion(accion) {
-            var ticket = document.getElementById('txtNumeroTicket').value;
-            if (!ticket) {
-                alert("Debe seleccionar un ticket primero.");
-                return;
+            const ticket = document.getElementById("txtNumeroTicketDropdown").value;
+            if (!ticket) return alert("Debe seleccionar un ticket.");
+
+            let msg = "";
+            if (accion === "CANCELAR") {
+                msg = `¿Cancelar ticket #${ticket}?`;
+            } else {
+                const nuevo = document.getElementById("cbNuevoEstado").value;
+                if (!nuevo) return alert("Seleccione un estado válido.");
+                msg = `¿Actualizar ticket #${ticket} a "${nuevo}"?`;
             }
-            
-            var confirmMsg = (accion === 'CANCELAR') 
-                ? "¿Está seguro que desea CANCELAR el ticket #" + ticket + "?"
-                : "¿Está seguro de ACTUALIZAR el estado del ticket #" + ticket + "?";
-            
-            if (confirm(confirmMsg)) {
-                document.getElementById('accionInput').value = accion;
-                document.getElementById('formAccion').submit();
+
+            if (confirm(msg)) {
+                document.getElementById("txtTicketSeleccionado").name = "numeroTicket";
+                document.getElementById("accionInput").value = accion;
+                document.getElementById("formAccion").submit();
             }
         }
     </script>
+
 </body>
 </html>
+
+
+
