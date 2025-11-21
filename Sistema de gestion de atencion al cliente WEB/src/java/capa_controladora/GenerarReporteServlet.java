@@ -65,8 +65,8 @@ public class GenerarReporteServlet extends HttpServlet {
         // 6. Pasar el origen de vuelta al JSP para que los filtros y el botón "Atrás" lo mantengan
         request.setAttribute("origen", origen);
 
-        // 7. Enviar a la vista (GenerarReporte.jsp)
-        RequestDispatcher rd = request.getRequestDispatcher("/GenerarReporte.jsp");
+        // 7. Enviar a la vista (generarReporte.jsp)corregido al fin
+        RequestDispatcher rd = request.getRequestDispatcher("/generarReporte.jsp");
         rd.forward(request, response);
     }
 }
