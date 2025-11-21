@@ -2,6 +2,7 @@
     Document   : GenerarReporte
     Created on : 12 nov 2025, 01:08:05
     Author     : DELL
+    Corregido
 --%>
 <%@page contentType="text/html" pageEncoding="UTF-8"%>
 <%@taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
