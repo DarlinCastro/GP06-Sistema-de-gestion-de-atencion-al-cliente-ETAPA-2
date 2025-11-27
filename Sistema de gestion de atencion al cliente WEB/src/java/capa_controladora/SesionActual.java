@@ -7,8 +7,8 @@ package capa_controladora;
 import capa_modelo.Usuario;
 
 /**
- * Clase utilitaria estática para mantener el estado del
- * usuario actualmente logueado en la aplicación.
+ * Clase utilitaria estática para mantener el estado del usuario actualmente
+ * logueado en la aplicación.
  */
 public class SesionActual {
 

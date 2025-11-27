@@ -58,6 +58,11 @@ public class GestionarUsuariosServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // *** CONFIGURACIÓN DE ENCODING UTF-8 ***
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+        response.setContentType("text/html; charset=UTF-8");
+
         // --- 1. Control de Sesión ---
         // Verifica si el usuario está autenticado antes de permitir el acceso.
         if (request.getSession().getAttribute("usuarioActual") == null) {
@@ -115,11 +120,6 @@ public class GestionarUsuariosServlet extends HttpServlet {
         }
     }
 
-    /*
-     * El bloque de código comentado parece ser una versión anterior o redundante
-     * del bloque try-catch principal de doGet, por lo que se mantiene comentado
-     * para no alterar la lógica.
-     */
     /**
      * Maneja las peticiones HTTP POST. Se utiliza para ejecutar las acciones de
      * gestión de usuarios (Registrar, Actualizar, Eliminar).
@@ -127,6 +127,10 @@ public class GestionarUsuariosServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
+        // *** CONFIGURACIÓN DE ENCODING UTF-8 (CRÍTICO: ANTES de leer parámetros) ***
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
 
         // Obtener el tipo de acción a realizar desde el formulario.
         String accion = request.getParameter("accion");
@@ -170,8 +174,8 @@ public class GestionarUsuariosServlet extends HttpServlet {
                 if (!esCorreoValido(correo)) {
                     throw new Exception("El correo electrónico no tiene un formato válido. Debe incluir '@' y un dominio (ejemplo: usuario@dominio.com)");
                 }
-                // VALIDACIÓN DE LONGITUD DE CORREO (Aunque el límite de 100 caracteres es más común)
-                if (correo.length() > 100) { // Corregido: El comentario dice 25, pero el código es más flexible. Se mantiene la lógica del código.
+                // VALIDACIÓN DE LONGITUD DE CORREO
+                if (correo.length() > 100) {
                     throw new Exception("El correo electrónico es demasiado largo. Máximo 100 caracteres.");
                 }
 
